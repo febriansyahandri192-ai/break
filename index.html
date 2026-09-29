@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crew Break Attendance System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode.js for generating QR Codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML5-QRCode for scanning QR Codes -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- XLSX library for Excel Exports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        /* Hide scrollbars for clean UI */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar / Mobile Header Navigation -->
+    <aside id="sidebar" class="w-full md:w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col justify-between shadow-xl z-20">
+        <div>
+            <!-- Logo & Brand Header -->
+            <div class="p-5 flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg">
+                        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide">BreakMaster</h1>
+                        <span class="text-xs text-indigo-400 font-medium">Crew Attendance v2.5</span>
+                    </div>
+                </div>
+                <button id="mobile-menu-btn" class="md:hidden text-slate-400 hover:text-white focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Main Navigation Links -->
+            <nav id="nav-menu" class="hidden md:block p-4 space-y-1 text-sm font-medium">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-chart-pie w-5 text-center text-indigo-400"></i>
+                    <span>Dashboard</span>
+                </button>
+
+                <button onclick="switchTab('qr-scan')" id="nav-qr-scan" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-qrcode w-5 text-center text-emerald-400"></i>
+                    <span>QR Scanner</span>
+                </button>
+
+                <button onclick="switchTab('pengajuan')" id="nav-pengajuan" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-clipboard-check w-5 text-center text-amber-400"></i>
+                        <span>Acc Pengajuan</span>
+                    </div>
+                    <span id="pending-badge" class="bg-amber-500 text-slate-950 font-bold text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+
+                <button onclick="switchTab('riwayat')" id="nav-riwayat" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-list-check w-5 text-center text-blue-400"></i>
+                    <span>Riwayat Break</span>
+                </button>
+
+                <button onclick="switchTab('data-crew')" id="nav-data-crew" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-users w-5 text-center text-purple-400"></i>
+                    <span>Data Crew</span>
+                </button>
+
+                <button onclick="switchTab('jam-break')" id="nav-jam-break" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-business-time w-5 text-center text-rose-400"></i>
+                    <span>Jam Break Shift</span>
+                </button>
+
+                <button onclick="switchTab('admin-management')" id="nav-admin-management" class="nav-item w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-user-shield w-5 text-center text-cyan-400"></i>
+                        <span>Admin System</span>
+                    </div>
+                    <span id="admin-count-badge" class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-2 py-0.5 rounded-md">1/5</span>
+                </button>
+
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-item w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-sliders w-5 text-center text-slate-400"></i>
+                    <span>Pengaturan</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Live Clock & User Footer -->
+        <div class="hidden md:block p-4 border-t border-slate-800">
+            <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-center">
+                <div id="live-time" class="text-xl font-bold font-mono text-indigo-400">00:00:00</div>
+                <div id="live-date" class="text-xs text-slate-400 mt-1">Senin, 1 Jan 2026</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Work Area -->
+    <main class="flex-1 overflow-y-auto h-screen p-4 md:p-8">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Ringkasan Break Hari Ini</h2>
+                    <p class="text-sm text-slate-500">Monitor status ketersediaan dan istirahat seluruh crew secara real-time.</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="refreshDashboard()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                        <i class="fa-solid fa-arrows-rotate text-indigo-600"></i>
+                        <span>Muat Ulang</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Metric Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="bg-blue-100 text-blue-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-users text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Crew</p>
+                        <h3 id="stat-total-crew" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="bg-amber-100 text-amber-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-mug-hot text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sedang Break</p>
+                        <h3 id="stat-on-break" class="text-2xl font-bold text-amber-600">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="bg-emerald-100 text-emerald-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-user-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selesai Break</p>
+                        <h3 id="stat-done-break" class="text-2xl font-bold text-emerald-600">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="bg-rose-100 text-rose-600 p-3.5 rounded-xl">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Terlambat</p>
+                        <h3 id="stat-late-break" class="text-2xl font-bold text-rose-600">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Crew Status List -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-clock text-indigo-500"></i> Active Status Monitor
+                    </h3>
+                    <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-medium">Real-Time Sync Active</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">Crew</th>
+                                <th class="p-4">Shift Break</th>
+                                <th class="p-4">Jam Mulai</th>
+                                <th class="p-4">Jam Selesai</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Durasi / Overtime</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-active-table" class="divide-y divide-slate-100">
+                            <!-- Injected Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: QR SCANNER -->
+        <section id="tab-qr-scan" class="tab-content space-y-6 hidden">
+            <div class="max-w-2xl mx-auto space-y-6">
+                <div class="text-center">
+                    <h2 class="text-2xl font-bold text-slate-900">Scan QR Code Crew</h2>
+                    <p class="text-sm text-slate-500">Arahkan QR Code ke kamera untuk memulai atau menyelesaikan jam break.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200/80 space-y-4">
+                    <div id="qr-reader" class="overflow-hidden rounded-xl bg-slate-900 min-h-[280px]"></div>
+                    <div class="flex items-center justify-between text-xs text-slate-500 px-2">
+                        <span><i class="fa-solid fa-camera mr-1"></i> Mode Kamera Aktif</span>
+                        <span>Auto Sync On</span>
+                    </div>
+
+                    <!-- Fallback Manual Input -->
+                    <div class="pt-4 border-t border-slate-100">
+                        <label class="block text-xs font-semibold text-slate-600 mb-2">Atau Masukkan Kode Crew Manual:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="manual-crew-id" placeholder="Contoh: CRW-1001" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <button onclick="submitManualScan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition">
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last Scan Alert Banner -->
+                <div id="scan-result-card" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-2">
+                    <!-- Dynamic Feedback Injected -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: ACC PENGAJUAN -->
+        <section id="tab-pengajuan" class="tab-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Persetujuan Break Khusus / Toleransi</h2>
+                    <p class="text-sm text-slate-500">Kelola izin break di luar jadwal shift resmi atau perubahan urutan.</p>
+                </div>
+                <button onclick="openModalPengajuan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Buat Pengajuan Baru</span>
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <span class="font-semibold text-slate-700 text-sm">Daftar Permohonan Approval</span>
+                    <span id="pending-count-label" class="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full">0 Pending</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">Tanggal & Waktu</th>
+                                <th class="p-4">Nama Crew</th>
+                                <th class="p-4">Jenis Alasan</th>
+                                <th class="p-4">Catatan</th>
+                                <th class="p-4">Status Approval</th>
+                                <th class="p-4 text-center">Aksi Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pengajuan-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: RIWAYAT -->
+        <section id="tab-riwayat" class="tab-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Riwayat Break Crew</h2>
+                    <p class="text-sm text-slate-500">Laporan histori aktivitas break lengkap dengan opsi ekspor data ke XLSX.</p>
+                </div>
+                <button onclick="exportHistoryToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Export ke Excel</span>
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Cari Crew / ID</label>
+                    <input type="text" id="filter-search" oninput="renderHistoryTable()" placeholder="Ketik nama atau ID..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Filter Status</label>
+                    <select id="filter-status" onchange="renderHistoryTable()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="ALL">Semua Status</option>
+                        <option value="TEPAT_WAKTU">Tepat Waktu</option>
+                        <option value="TERLAMBAT">Terlambat Kembali</option>
+                        <option value="SEDANG_BREAK">Sedang Break</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+                    <input type="date" id="filter-date" onchange="renderHistoryTable()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">Waktu Check-In</th>
+                                <th class="p-4">Waktu Check-Out</th>
+                                <th class="p-4">Crew ID & Nama</th>
+                                <th class="p-4">Shift Break</th>
+                                <th class="p-4">Durasi Break</th>
+                                <th class="p-4">Status Akhir</th>
+                            </tr>
+                        </thead>
+                        <tbody id="riwayat-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: DATA CREW -->
+        <section id="tab-data-crew" class="tab-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Manajemen Data Crew</h2>
+                    <p class="text-sm text-slate-500">Tambah crew baru, update status aktif, dan cetak QR Code unik.</p>
+                </div>
+                <button onclick="openCrewModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Tambah Crew Baru</span>
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">ID Crew</th>
+                                <th class="p-4">Nama Lengkap</th>
+                                <th class="p-4">Jabatan / Role</th>
+                                <th class="p-4">Shift Default</th>
+                                <th class="p-4">Status Crew</th>
+                                <th class="p-4 text-center">Aksi & QR Code</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crew-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: JAM BREAK SHIFT -->
+        <section id="tab-jam-break" class="tab-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Pengaturan Jam Break Shift</h2>
+                    <p class="text-sm text-slate-500">Atur durasi dan alokasi jam istirahat untuk tiap shift kerja.</p>
+                </div>
+                <button onclick="openShiftModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>Tambah Master Shift</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="shift-cards-container">
+                <!-- Injected Dynamically -->
+            </div>
+        </section>
+
+        <!-- TAB 7: ADMIN MANAGEMENT -->
+        <section id="tab-admin-management" class="tab-content space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Admin Management System</h2>
+                    <p class="text-sm text-slate-500">Maksimal 5 administrator terdaftar untuk keamanan operasional.</p>
+                </div>
+                <button id="add-admin-btn" onclick="openAdminModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center space-x-2 shadow-sm transition">
+                    <i class="fa-solid fa-user-lock"></i>
+                    <span>Tambah Admin</span>
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-4 bg-cyan-50/50 border-b border-slate-100 flex items-center justify-between text-xs text-cyan-800">
+                    <span class="font-semibold"><i class="fa-solid fa-circle-info mr-1"></i> Kuota Admin Sistem</span>
+                    <span id="admin-quota-text" class="font-bold">1 / 5 Terpakai</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th class="p-4">Username / ID Admin</th>
+                                <th class="p-4">Nama Lengkap</th>
+                                <th class="p-4">Level Hak Akses</th>
+                                <th class="p-4">Tanggal Dibuat</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-slate-100">
+                            <!-- Injected Dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 8: SETTINGS DASHBOARD -->
+        <section id="tab-settings" class="tab-content space-y-6 hidden">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Pengaturan Sistem</h2>
+                <p class="text-sm text-slate-500">Konfigurasi preferensi aplikasi, sinyal suara, dan reset data.</p>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 space-y-6 max-w-3xl">
+                <!-- General Settings Form -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base border-b pb-2">Preferensi Operasional</h3>
+                    
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold text-sm text-slate-800">Notifikasi Suara Scan</p>
+                            <p class="text-xs text-slate-500">Putar efek suara saat QR Code berhasil dipindai.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-sound" class="sr-only peer" checked onchange="saveSettings()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <div>
+                            <p class="font-semibold text-sm text-slate-800">Toleransi Terlambat (Menit)</p>
+                            <p class="text-xs text-slate-500">Batas waktu tambahan sebelum ditandai status terlambat.</p>
+                        </div>
+                        <input type="number" id="setting-tolerance" min="0" max="30" value="5" onchange="saveSettings()" class="w-20 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-indigo-500 font-semibold">
+                    </div>
+                </div>
+
+                <!-- Database Maintenance -->
+                <div class="space-y-4 pt-4 border-t border-slate-100">
+                    <h3 class="font-bold text-slate-800 text-base border-b pb-2 text-rose-600">Zona Bahaya Data</h3>
+                    <p class="text-xs text-slate-500">Tindakan berikut akan mengatur ulang data local storage browser.</p>
+                    <div class="flex space-x-3">
+                        <button onclick="resetDemoData()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                            Reset ke Data Sample
+                        </button>
+                        <button onclick="clearAllData()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">
+                            Hapus Seluruh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: ADD/EDIT CREW -->
+    <div id="modal-crew" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 id="modal-crew-title" class="font-bold text-lg">Tambah Crew Baru</h3>
+                <button onclick="closeCrewModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-crew" onsubmit="saveCrew(event)" class="p-6 space-y-4">
+                <input type="hidden" id="crew-index">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ID Crew (Unique)</label>
+                    <input type="text" id="crew-id-input" required placeholder="Contoh: CRW-1005" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap</label>
+                    <input type="text" id="crew-name-input" required placeholder="Nama Crew" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan / Role</label>
+                    <input type="text" id="crew-role-input" required placeholder="Barista / Kitchen / Staff" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Shift Default</label>
+                    <select id="crew-shift-input" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <!-- Dynamic Options Injected -->
+                    </select>
+                </div>
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="closeCrewModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-md">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: QR CODE VIEW & DOWNLOAD -->
+    <div id="modal-qr" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center p-6 space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b">
+                <h3 id="modal-qr-crew-name" class="font-bold text-slate-800 text-lg">QR Code Crew</h3>
+                <button onclick="closeQrModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="flex justify-center py-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div id="qrcode-container"></div>
+            </div>
+            <p id="modal-qr-crew-id" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 py-1.5 rounded-lg">ID: -</p>
+            <div class="flex justify-center space-x-2">
+                <button onclick="printQrCard()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Cetak / Download</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD SHIFT MASTER -->
+    <div id="modal-shift" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg">Master Shift Break Baru</h3>
+                <button onclick="closeShiftModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-shift" onsubmit="saveShift(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Shift</label>
+                    <input type="text" id="shift-name-input" required placeholder="Contoh: Shift Break 1 (Siang)" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Mulai Break</label>
+                        <input type="time" id="shift-start-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Selesai Break</label>
+                        <input type="time" id="shift-end-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Alokasi Durasi (Menit)</label>
+                    <input type="number" id="shift-duration-input" min="5" value="30" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="closeShiftModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-md">Simpan Shift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ADMIN MANAGEMENT (MAX 5) -->
+    <div id="modal-admin" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="p-5 bg-cyan-950 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg">Tambah Admin Baru</h3>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-admin" onsubmit="saveAdmin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Username / User ID</label>
+                    <input type="text" id="admin-user-input" required placeholder="admin_store1" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Administrator</label>
+                    <input type="text" id="admin-name-input" required placeholder="Budi Santoso" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Role Access Level</label>
+                    <select id="admin-role-input" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Shift Manager">Shift Manager</option>
+                        <option value="Supervisor">Supervisor</option>
+                    </select>
+                </div>
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="closeAdminModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold shadow-md">Simpan Admin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: ACC PENGAJUAN FORM -->
+    <div id="modal-pengajuan" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="p-5 bg-amber-500 text-slate-950 flex justify-between items-center">
+                <h3 class="font-bold text-lg">Form Approval Break Khusus</h3>
+                <button onclick="closeModalPengajuan()" class="text-slate-800 hover:text-slate-950"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="form-pengajuan" onsubmit="savePengajuan(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Crew</label>
+                    <select id="pengajuan-crew-select" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <!-- Dynamically Injected -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Permohonan</label>
+                    <select id="pengajuan-type" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <option value="Tukar Shift Break">Tukar Shift Break</option>
+                        <option value="Break Di Luar Jam">Break Di Luar Jam Official</option>
+                        <option value="Tambahan Waktu">Tambahan Waktu Istirahat</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Alasan / Catatan</label>
+                    <textarea id="pengajuan-note" required rows="3" placeholder="Jelaskan alasan..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+                </div>
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModalPengajuan()" class="px-4 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-sm shadow-md">Kirim Pengajuan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // GLOBAL DATA STRUCTURES & LOCAL STORAGE INITIALIZATION
+        const APP_KEYS = {
+            CREW: 'cb_crew_data_v2',
+            SHIFTS: 'cb_shifts_data_v2',
+            ATTENDANCE: 'cb_attendance_logs_v2',
+            ADMINS: 'cb_admin_users_v2',
+            PENGAJUAN: 'cb_pengajuan_data_v2',
+            SETTINGS: 'cb_app_settings_v2'
+        };
+
+        // Initial Mock Data
+        const DEFAULT_SHIFTS = [
+            { id: 'S1', name: 'Shift Break 1 (Siang)', start: '11:30', end: '12:00', duration: 30 },
+            { id: 'S2', name: 'Shift Break 2 (Siang)', start: '12:15', end: '12:45', duration: 30 },
+            { id: 'S3', name: 'Shift Break 3 (Sore)', start: '16:00', end: '16:30', duration: 30 }
+        ];
+
+        const DEFAULT_CREW = [
+            { id: 'CRW-1001', name: 'Andi Pratama', role: 'Head Barista', shiftId: 'S1', active: true },
+            { id: 'CRW-1002', name: 'Siti Rahma', role: 'Cashier', shiftId: 'S1', active: true },
+            { id: 'CRW-1003', name: 'Budi Kurniawan', role: 'Kitchen Staff', shiftId: 'S2', active: true },
+            { id: 'CRW-1004', name: 'Dewi Lestari', role: 'Server', shiftId: 'S3', active: true }
+        ];
+
+        const DEFAULT_ADMINS = [
+            { id: 'ADM-01', user: 'admin_main', name: 'Store Manager', role: 'Super Admin', date: '2026-01-01' }
+        ];
+
+        // State Holders
+        let crewList = [];
+        let shiftList = [];
+        let attendanceLogs = [];
+        let adminList = [];
+        let pengajuanList = [];
+        let appSettings = { sound: true, tolerance: 5 };
+        let html5QrScanner = null;
+
+        // Initialize Application
+        window.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+            setupLiveClock();
+            setupMobileMenu();
+            setupCrossTabSyncListener(); // MANDATORY STORAGE LISTENER FOR CROSS-TAB SYNC
+            refreshDashboard();
+            initQrScanner();
+        });
+
+        // Local Storage Retrieval & Defaults Setup
+        function loadInitialData() {
+            crewList = JSON.parse(localStorage.getItem(APP_KEYS.CREW)) || DEFAULT_CREW;
+            shiftList = JSON.parse(localStorage.getItem(APP_KEYS.SHIFTS)) || DEFAULT_SHIFTS;
+            attendanceLogs = JSON.parse(localStorage.getItem(APP_KEYS.ATTENDANCE)) || [];
+            adminList = JSON.parse(localStorage.getItem(APP_KEYS.ADMINS)) || DEFAULT_ADMINS;
+            pengajuanList = JSON.parse(localStorage.getItem(APP_KEYS.PENGAJUAN)) || [];
+            appSettings = JSON.parse(localStorage.getItem(APP_KEYS.SETTINGS)) || { sound: true, tolerance: 5 };
+
+            persistAllData();
+        }
+
+        function persistAllData() {
+            localStorage.setItem(APP_KEYS.CREW, JSON.stringify(crewList));
+            localStorage.setItem(APP_KEYS.SHIFTS, JSON.stringify(shiftList));
+            localStorage.setItem(APP_KEYS.ATTENDANCE, JSON.stringify(attendanceLogs));
+            localStorage.setItem(APP_KEYS.ADMINS, JSON.stringify(adminList));
+            localStorage.setItem(APP_KEYS.PENGAJUAN, JSON.stringify(pengajuanList));
+            localStorage.setItem(APP_KEYS.SETTINGS, JSON.stringify(appSettings));
+        }
+
+        // Real-Time Cross-Tab Synchronization Listener
+        function setupCrossTabSyncListener() {
+            window.addEventListener('storage', (event) => {
+                if (Object.values(APP_KEYS).includes(event.key)) {
+                    // Reload fresh state from LocalStorage when updated by another tab
+                    crewList = JSON.parse(localStorage.getItem(APP_KEYS.CREW)) || [];
+                    shiftList = JSON.parse(localStorage.getItem(APP_KEYS.SHIFTS)) || [];
+                    attendanceLogs = JSON.parse(localStorage.getItem(APP_KEYS.ATTENDANCE)) || [];
+                    adminList = JSON.parse(localStorage.getItem(APP_KEYS.ADMINS)) || [];
+                    pengajuanList = JSON.parse(localStorage.getItem(APP_KEYS.PENGAJUAN)) || [];
+                    appSettings = JSON.parse(localStorage.getItem(APP_KEYS.SETTINGS)) || { sound: true, tolerance: 5 };
+
+                    // Refresh active UI Views
+                    refreshDashboard();
+                    renderHistoryTable();
+                    renderCrewTable();
+                    renderShiftCards();
+                    renderAdminTable();
+                    renderPengajuanTable();
+                }
+            });
+        }
+
+        // Live Clock Component
+        function setupLiveClock() {
+            const timeEl = document.getElementById('live-time');
+            const dateEl = document.getElementById('live-date');
+            
+            setInterval(() => {
+                const now = new Date();
+                timeEl.textContent = now.toLocaleTimeString('id-ID', { hour12: false });
+                dateEl.textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+            }, 1000);
+        }
+
+        // Navigation Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('bg-indigo-600', 'text-white'));
+            
+            const selectedTab = document.getElementById(`tab-${tabId}`);
+            if (selectedTab) selectedTab.classList.remove('hidden');
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) activeNav.classList.add('bg-indigo-600', 'text-white');
+
+            // Tab Specific Renders
+            if (tabId === 'dashboard') refreshDashboard();
+            if (tabId === 'riwayat') renderHistoryTable();
+            if (tabId === 'data-crew') renderCrewTable();
+            if (tabId === 'jam-break') renderShiftCards();
+            if (tabId === 'admin-management') renderAdminTable();
+            if (tabId === 'pengajuan') renderPengajuanTable();
+
+            // Mobile menu collapse
+            if (window.innerWidth < 768) {
+                document.getElementById('nav-menu').classList.add('hidden');
+            }
+        }
+
+        function setupMobileMenu() {
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('nav-menu').classList.toggle('hidden');
+            });
+        }
+
+        // QR Code Scanner Logic
+        function initQrScanner() {
+            if (html5QrScanner) return;
+
+            html5QrScanner = new Html5QrcodeScanner(
+                "qr-reader",
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                /* verbose= */ false
+            );
+
+            html5QrScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText) {
+            processCrewScan(decodedText.trim());
+        }
+
+        function onScanFailure(error) {
+            // Silence scan frame failures
+        }
+
+        function submitManualScan() {
+            const input = document.getElementById('manual-crew-id');
+            const code = input.value.trim();
+            if (!code) return;
+            processCrewScan(code);
+            input.value = '';
+        }
+
+        // Core Attendance Processor (In / Out Trigger)
+        function processCrewScan(crewId) {
+            const crew = crewList.find(c => c.id.toUpperCase() === crewId.toUpperCase() && c.active);
+            const card = document.getElementById('scan-result-card');
+            
+            if (!crew) {
+                playAudioBeep(false);
+                card.className = "bg-rose-50 border border-rose-200 p-4 rounded-2xl text-rose-800 space-y-1 block";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2 font-bold"><i class="fa-solid fa-circle-xmark text-rose-600"></i> <span>Scan Gagal</span></div>
+                    <p class="text-xs">ID Crew "${crewId}" tidak ditemukan atau tidak aktif dalam sistem.</p>
+                `;
+                return;
+            }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toISOString().split('T')[0];
+
+            // Check if crew currently has an ongoing break session
+            const activeLogIndex = attendanceLogs.findIndex(l => l.crewId === crew.id && l.status === 'SEDANG_BREAK');
+
+            if (activeLogIndex !== -1) {
+                // Selesai Break (Check-Out)
+                const log = attendanceLogs[activeLogIndex];
+                const startTime = new Date(log.checkInISO);
+                const diffMinutes = Math.round((now - startTime) / (1000 * 60));
+
+                const shift = shiftList.find(s => s.id === crew.shiftId) || { duration: 30 };
+                const maxAllowed = shift.duration + parseInt(appSettings.tolerance || 5);
+                const isLate = diffMinutes > maxAllowed;
+
+                log.checkOut = timeStr;
+                log.checkOutISO = now.toISOString();
+                log.durationMinutes = diffMinutes;
+                log.status = isLate ? 'TERLAMBAT' : 'TEPAT_WAKTU';
+
+                attendanceLogs[activeLogIndex] = log;
+                persistAllData();
+                playAudioBeep(true);
+
+                card.className = "bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-emerald-800 space-y-1 block";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2 font-bold"><i class="fa-solid fa-circle-check text-emerald-600"></i> <span>Selesai Break Detected</span></div>
+                    <p class="text-xs"><strong>${crew.name}</strong> (${crew.id}) telah menyelesaikan break. Durasi: <strong>${diffMinutes} Menit</strong> ${isLate ? '<span class="text-rose-600 font-bold">(Overtime/Terlambat)</span>' : ''}</p>
+                `;
+            } else {
+                // Mulai Break (Check-In)
+                const shift = shiftList.find(s => s.id === crew.shiftId) || { name: 'Custom Break' };
+                const newLog = {
+                    id: 'LOG-' + Date.now(),
+                    crewId: crew.id,
+                    crewName: crew.name,
+                    shiftName: shift.name,
+                    date: dateStr,
+                    checkIn: timeStr,
+                    checkInISO: now.toISOString(),
+                    checkOut: '-',
+                    checkOutISO: null,
+                    durationMinutes: 0,
+                    status: 'SEDANG_BREAK'
+                };
+
+                attendanceLogs.unshift(newLog);
+                persistAllData();
+                playAudioBeep(true);
+
+                card.className = "bg-amber-50 border border-amber-200 p-4 rounded-2xl text-amber-800 space-y-1 block";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2 font-bold"><i class="fa-solid fa-mug-hot text-amber-600"></i> <span>Mulai Break Registered</span></div>
+                    <p class="text-xs"><strong>${crew.name}</strong> (${crew.id}) memulai break pada <strong>${timeStr}</strong> [${shift.name}].</p>
+                `;
+            }
+
+            refreshDashboard();
+        }
+
+        function playAudioBeep(success = true) {
+            if (!appSettings.sound) return;
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.type = success ? 'sine' : 'sawtooth';
+            osc.frequency.value = success ? 880 : 300;
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+        }
+
+        // Refresh & Render Dashboard Statistics & Live Monitor
+        function refreshDashboard() {
+            // Stats Calculations
+            const totalCrew = crewList.filter(c => c.active).length;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayLogs = attendanceLogs.filter(l => l.date === todayStr);
+
+            const onBreak = todayLogs.filter(l => l.status === 'SEDANG_BREAK').length;
+            const doneBreak = todayLogs.filter(l => l.status === 'TEPAT_WAKTU').length;
+            const lateBreak = todayLogs.filter(l => l.status === 'TERLAMBAT').length;
+
+            document.getElementById('stat-total-crew').textContent = totalCrew;
+            document.getElementById('stat-on-break').textContent = onBreak;
+            document.getElementById('stat-done-break').textContent = doneBreak;
+            document.getElementById('stat-late-break').textContent = lateBreak;
+
+            // Render Monitor Table
+            const tableBody = document.getElementById('dashboard-active-table');
+            tableBody.innerHTML = '';
+
+            if (todayLogs.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 text-xs">Belum ada aktivitas break tercatat hari ini.</td></tr>`;
+                return;
+            }
+
+            todayLogs.forEach(log => {
+                let statusBadge = '';
+                if (log.status === 'SEDANG_BREAK') {
+                    statusBadge = `<span class="bg-amber-100 text-amber-800 border border-amber-300 font-semibold text-xs px-2.5 py-1 rounded-full"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Sedang Break</span>`;
+                } else if (log.status === 'TEPAT_WAKTU') {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-xs px-2.5 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i> Tepat Waktu</span>`;
+                } else {
+                    statusBadge = `<span class="bg-rose-100 text-rose-800 border border-rose-300 font-semibold text-xs px-2.5 py-1 rounded-full"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Terlambat</span>`;
+                }
+
+                const durationText = log.status === 'SEDANG_BREAK' ? 'Berjalan...' : `${log.durationMinutes} Menit`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-slate-800">${log.crewName} <br><span class="text-xs font-mono font-normal text-slate-400">${log.crewId}</span></td>
+                    <td class="p-4 text-slate-600 text-xs font-medium">${log.shiftName}</td>
+                    <td class="p-4 font-mono text-xs">${log.checkIn}</td>
+                    <td class="p-4 font-mono text-xs">${log.checkOut || '-'}</td>
+                    <td class="p-4">${statusBadge}</td>
+                    <td class="p-4 font-semibold text-xs text-slate-700">${durationText}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // Update Badges
+            const pendingCount = pengajuanList.filter(p => p.status === 'PENDING').length;
+            const badge = document.getElementById('pending-badge');
+            const pendingLabel = document.getElementById('pending-count-label');
+            if (pendingCount > 0) {
+                badge.textContent = pendingCount;
+                badge.classList.remove('hidden');
+                if (pendingLabel) pendingLabel.textContent = `${pendingCount} Pending`;
+            } else {
+                badge.classList.add('hidden');
+                if (pendingLabel) pendingLabel.textContent = `0 Pending`;
+            }
+
+            document.getElementById('admin-count-badge').textContent = `${adminList.length}/5`;
+        }
+
+        // Render History Table (Tab 4)
+        function renderHistoryTable() {
+            const body = document.getElementById('riwayat-table-body');
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const dateFilter = document.getElementById('filter-date').value;
+
+            body.innerHTML = '';
+
+            let filtered = attendanceLogs.filter(log => {
+                const matchSearch = log.crewName.toLowerCase().includes(search) || log.crewId.toLowerCase().includes(search);
+                const matchStatus = statusFilter === 'ALL' || log.status === statusFilter;
+                const matchDate = !dateFilter || log.date === dateFilter;
+                return matchSearch && matchStatus && matchDate;
+            });
+
+            if (filtered.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 text-xs">Data riwayat tidak ditemukan.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono text-xs">${log.date} ${log.checkIn}</td>
+                    <td class="p-4 font-mono text-xs">${log.checkOut || '-'}</td>
+                    <td class="p-4 font-semibold">${log.crewName} <span class="text-xs font-mono font-normal text-slate-400">(${log.crewId})</span></td>
+                    <td class="p-4 text-xs">${log.shiftName}</td>
+                    <td class="p-4 text-xs font-semibold">${log.status === 'SEDANG_BREAK' ? 'Sedang Berlangsung' : log.durationMinutes + ' Menit'}</td>
+                    <td class="p-4">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-md ${
+                            log.status === 'TEPAT_WAKTU' ? 'bg-emerald-100 text-emerald-700' :
+                            log.status === 'TERLAMBAT' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                        }">${log.status}</span>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        // Export History to Excel (XLSX Library)
+        function exportHistoryToExcel() {
+            if (attendanceLogs.length === 0) {
+                alert('Belum ada data riwayat untuk diexport.');
+                return;
+            }
+
+            const exportData = attendanceLogs.map(l => ({
+                'ID Log': l.id,
+                'Tanggal': l.date,
+                'ID Crew': l.crewId,
+                'Nama Crew': l.crewName,
+                'Shift': l.shiftName,
+                'Jam Check-In': l.checkIn,
+                'Jam Check-Out': l.checkOut || '-',
+                'Durasi (Menit)': l.durationMinutes || 0,
+                'Status Akhir': l.status
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Riwayat Break");
+            XLSX.writeFile(wb, `Riwayat_Break_Crew_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        // Render Data Crew Table (Tab 5)
+        function renderCrewTable() {
+            const body = document.getElementById('crew-table-body');
+            body.innerHTML = '';
+
+            crewList.forEach((crew, index) => {
+                const shift = shiftList.find(s => s.id === crew.shiftId) || { name: 'Shift Default' };
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono font-bold text-xs text-indigo-600">${crew.id}</td>
+                    <td class="p-4 font-semibold text-slate-800">${crew.name}</td>
+                    <td class="p-4 text-xs text-slate-600">${crew.role}</td>
+                    <td class="p-4 text-xs text-slate-600">${shift.name}</td>
+                    <td class="p-4">
+                        <button onclick="toggleCrewActive(${index})" class="text-xs font-semibold px-2.5 py-1 rounded-full border transition ${
+                            crew.active ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-300'
+                        }">
+                            ${crew.active ? 'Aktif' : 'Non-Aktif'}
+                        </button>
+                    </td>
+                    <td class="p-4 text-center space-x-2">
+                        <button onclick="openQrModal('${crew.id}', '${crew.name}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition" title="Lihat QR Code">
+                            <i class="fa-solid fa-qrcode"></i> QR
+                        </button>
+                        <button onclick="editCrew(${index})" class="bg-amber-50 hover:bg-amber-100 text-amber-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deleteCrew(${index})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        // Crew Operations
+        function openCrewModal(editIndex = -1) {
+            const modal = document.getElementById('modal-crew');
+            const title = document.getElementById('modal-crew-title');
+            const shiftSelect = document.getElementById('crew-shift-input');
+
+            // Populate Shift Options
+            shiftSelect.innerHTML = shiftList.map(s => `<option value="${s.id}">${s.name} (${s.start}-${s.end})</option>`).join('');
+
+            if (editIndex >= 0) {
+                const c = crewList[editIndex];
+                title.textContent = 'Edit Data Crew';
+                document.getElementById('crew-index').value = editIndex;
+                document.getElementById('crew-id-input').value = c.id;
+                document.getElementById('crew-id-input').readOnly = true;
+                document.getElementById('crew-name-input').value = c.name;
+                document.getElementById('crew-role-input').value = c.role;
+                document.getElementById('crew-shift-input').value = c.shiftId;
+            } else {
+                title.textContent = 'Tambah Crew Baru';
+                document.getElementById('form-crew').reset();
+                document.getElementById('crew-index').value = -1;
+                document.getElementById('crew-id-input').readOnly = false;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeCrewModal() {
+            document.getElementById('modal-crew').classList.add('hidden');
+        }
+
+        function saveCrew(e) {
+            e.preventDefault();
+            const index = parseInt(document.getElementById('crew-index').value);
+            const id = document.getElementById('crew-id-input').value.trim();
+            const name = document.getElementById('crew-name-input').value.trim();
+            const role = document.getElementById('crew-role-input').value.trim();
+            const shiftId = document.getElementById('crew-shift-input').value;
+
+            if (index === -1 && crewList.some(c => c.id.toUpperCase() === id.toUpperCase())) {
+                alert('ID Crew sudah digunakan oleh staf lain.');
+                return;
+            }
+
+            if (index >= 0) {
+                crewList[index] = { ...crewList[index], name, role, shiftId };
+            } else {
+                crewList.push({ id, name, role, shiftId, active: true });
+            }
+
+            persistAllData();
+            renderCrewTable();
+            closeCrewModal();
+            refreshDashboard();
+        }
+
+        function toggleCrewActive(index) {
+            crewList[index].active = !crewList[index].active;
+            persistAllData();
+            renderCrewTable();
+            refreshDashboard();
+        }
+
+        function deleteCrew(index) {
+            if (confirm(`Apakah Anda yakin ingin menghapus crew "${crewList[index].name}"?`)) {
+                crewList.splice(index, 1);
+                persistAllData();
+                renderCrewTable();
+                refreshDashboard();
+            }
+        }
+
+        // QR Code Modal Visualizer & Generator (QRCode.js)
+        function openQrModal(crewId, crewName) {
+            document.getElementById('modal-qr-crew-name').textContent = crewName;
+            document.getElementById('modal-qr-crew-id').textContent = `ID: ${crewId}`;
+            
+            const container = document.getElementById('qrcode-container');
+            container.innerHTML = '';
+
+            new QRCode(container, {
+                text: crewId,
+                width: 180,
+                height: 180,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('modal-qr').classList.remove('hidden');
+        }
+
+        function closeQrModal() {
+            document.getElementById('modal-qr').classList.add('hidden');
+        }
+
+        function printQrCard() {
+            const windowUrl = 'about:blank';
+            const uniqueName = new Date().getTime();
+            const printWindow = window.open(windowUrl, uniqueName, 'width=400,height=500');
+
+            const name = document.getElementById('modal-qr-crew-name').textContent;
+            const id = document.getElementById('modal-qr-crew-id').textContent;
+            const qrHtml = document.getElementById('qrcode-container').innerHTML;
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>ID Card QR - ${name}</title>
+                    <style>
+                        body { font-family: sans-serif; text-align: center; padding: 20px; }
+                        .card { border: 2px solid #000; border-radius: 12px; padding: 20px; display: inline-block; }
+                        h2 { margin: 0 0 5px 0; font-size: 18px; }
+                        p { margin: 0 0 15px 0; font-size: 14px; color: #555; }
+                        .qr { display: flex; justify-content: center; margin-bottom: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <h2>${name}</h2>
+                        <p>${id}</p>
+                        <div class="qr">${qrHtml}</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); window.close(); }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Shift Master Management (Tab 6)
+        function renderShiftCards() {
+            const container = document.getElementById('shift-cards-container');
+            container.innerHTML = '';
+
+            shiftList.forEach((shift, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">${shift.name}</h3>
+                            <span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">ID: ${shift.id}</span>
+                        </div>
+                        <button onclick="deleteShift(${index})" class="text-slate-400 hover:text-rose-600 transition"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl flex justify-between text-xs font-mono text-slate-700">
+                        <div><i class="fa-regular fa-clock text-indigo-500 mr-1"></i> ${shift.start} - ${shift.end}</div>
+                        <div class="font-bold text-indigo-600">${shift.duration} Menit</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openShiftModal() {
+            document.getElementById('form-shift').reset();
+            document.getElementById('modal-shift').classList.remove('hidden');
+        }
+
+        function closeShiftModal() {
+            document.getElementById('modal-shift').classList.add('hidden');
+        }
+
+        function saveShift(e) {
+            e.preventDefault();
+            const name = document.getElementById('shift-name-input').value.trim();
+            const start = document.getElementById('shift-start-input').value;
+            const end = document.getElementById('shift-end-input').value;
+            const duration = parseInt(document.getElementById('shift-duration-input').value);
+
+            const newShift = {
+                id: 'S' + (shiftList.length + 1),
+                name, start, end, duration
+            };
+
+            shiftList.push(newShift);
+            persistAllData();
+            renderShiftCards();
+            closeShiftModal();
+        }
+
+        function deleteShift(index) {
+            if (shiftList.length <= 1) {
+                alert('Minimal harus ada 1 Shift Break master!');
+                return;
+            }
+            if (confirm(`Hapus master shift "${shiftList[index].name}"?`)) {
+                shiftList.splice(index, 1);
+                persistAllData();
+                renderShiftCards();
+            }
+        }
+
+        // Admin Management Logic (Max 5 Admins Enforcement)
+        function renderAdminTable() {
+            const body = document.getElementById('admin-table-body');
+            const addBtn = document.getElementById('add-admin-btn');
+            const quotaText = document.getElementById('admin-quota-text');
+
+            body.innerHTML = '';
+            quotaText.textContent = `${adminList.length} / 5 Terpakai`;
+
+            if (adminList.length >= 5) {
+                addBtn.disabled = true;
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                addBtn.disabled = false;
+                addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            adminList.forEach((admin, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono font-semibold text-xs text-cyan-700">${admin.user}</td>
+                    <td class="p-4 font-semibold text-slate-800">${admin.name}</td>
+                    <td class="p-4"><span class="bg-cyan-100 text-cyan-800 font-bold text-xs px-2.5 py-1 rounded-md">${admin.role}</span></td>
+                    <td class="p-4 text-xs font-mono text-slate-500">${admin.date}</td>
+                    <td class="p-4 text-center">
+                        ${adminList.length > 1 ? `
+                            <button onclick="deleteAdmin(${index})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg text-xs font-semibold transition">
+                                <i class="fa-solid fa-user-minus"></i> Hapus
+                            </button>
+                        ` : '<span class="text-xs text-slate-400 italic">Primary Admin</span>'}
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function openAdminModal() {
+            if (adminList.length >= 5) {
+                alert('Batas maksimal 5 Admin telah tercapai!');
+                return;
+            }
+            document.getElementById('form-admin').reset();
+            document.getElementById('modal-admin').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('modal-admin').classList.add('hidden');
+        }
+
+        function saveAdmin(e) {
+            e.preventDefault();
+            if (adminList.length >= 5) {
+                alert('Batas maksimal 5 Admin telah tercapai!');
+                closeAdminModal();
+                return;
+            }
+
+            const user = document.getElementById('admin-user-input').value.trim();
+            const name = document.getElementById('admin-name-input').value.trim();
+            const role = document.getElementById('admin-role-input').value;
+
+            if (adminList.some(a => a.user.toLowerCase() === user.toLowerCase())) {
+                alert('Username Admin sudah terdaftar!');
+                return;
+            }
+
+            adminList.push({
+                id: 'ADM-' + Date.now(),
+                user, name, role,
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            persistAllData();
+            renderAdminTable();
+            closeAdminModal();
+            refreshDashboard();
+        }
+
+        function deleteAdmin(index) {
+            if (confirm(`Hapus hak akses admin untuk "${adminList[index].name}"?`)) {
+                adminList.splice(index, 1);
+                persistAllData();
+                renderAdminTable();
+                refreshDashboard();
+            }
+        }
+
+        // Acc Pengajuan System (Tab 3)
+        function renderPengajuanTable() {
+            const body = document.getElementById('pengajuan-table-body');
+            body.innerHTML = '';
+
+            if (pengajuanList.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 text-xs">Belum ada pengajuan toleransi / break khusus.</td></tr>`;
+                return;
+            }
+
+            pengajuanList.forEach((item, index) => {
+                let badgeClass = 'bg-amber-100 text-amber-800';
+                if (item.status === 'DISETUJUI') badgeClass = 'bg-emerald-100 text-emerald-800';
+                if (item.status === 'DITOLAK') badgeClass = 'bg-rose-100 text-rose-800';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-mono text-xs text-slate-500">${item.timestamp}</td>
+                    <td class="p-4 font-semibold text-slate-800">${item.crewName}</td>
+                    <td class="p-4 text-xs font-medium text-indigo-600">${item.type}</td>
+                    <td class="p-4 text-xs text-slate-600 max-w-xs">${item.note}</td>
+                    <td class="p-4"><span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeClass}">${item.status}</span></td>
+                    <td class="p-4 text-center space-x-1">
+                        ${item.status === 'PENDING' ? `
+                            <button onclick="approvePengajuan(${index}, 'DISETUJUI')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm transition">
+                                Setujui
+                            </button>
+                            <button onclick="approvePengajuan(${index}, 'DITOLAK')" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm transition">
+                                Tolak
+                            </button>
+                        ` : `<span class="text-xs text-slate-400 italic">Selesai</span>`}
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function openModalPengajuan() {
+            const select = document.getElementById('pengajuan-crew-select');
+            select.innerHTML = crewList.filter(c => c.active).map(c => `<option value="${c.id}">${c.name} (${c.id})</option>`).join('');
+            document.getElementById('form-pengajuan').reset();
+            document.getElementById('modal-pengajuan').classList.remove('hidden');
+        }
+
+        function closeModalPengajuan() {
+            document.getElementById('modal-pengajuan').classList.add('hidden');
+        }
+
+        function savePengajuan(e) {
+            e.preventDefault();
+            const crewId = document.getElementById('pengajuan-crew-select').value;
+            const crew = crewList.find(c => c.id === crewId);
+            const type = document.getElementById('pengajuan-type').value;
+            const note = document.getElementById('pengajuan-note').value.trim();
+
+            pengajuanList.unshift({
+                id: 'ACC-' + Date.now(),
+                crewId,
+                crewName: crew ? crew.name : 'Unknown',
+                type, note,
+                status: 'PENDING',
+                timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            persistAllData();
+            renderPengajuanTable();
+            closeModalPengajuan();
+            refreshDashboard();
+        }
+
+        function approvePengajuan(index, status) {
+            pengajuanList[index].status = status;
+            persistAllData();
+            renderPengajuanTable();
+            refreshDashboard();
+        }
+
+        // System Settings & Maintenance (Tab 8)
+        function saveSettings() {
+            appSettings.sound = document.getElementById('setting-sound').checked;
+            appSettings.tolerance = parseInt(document.getElementById('setting-tolerance').value);
+            persistAllData();
+        }
+
+        function resetDemoData() {
+            if (confirm('Reset seluruh data ke sampel bawaan awal?')) {
+                localStorage.clear();
+                loadInitialData();
+                refreshDashboard();
+                alert('Data berhasil di-reset!');
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('PERINGATAN: Seluruh data crew, log break, dan admin akan dihapus secara permanen! Lanjutkan?')) {
+                localStorage.clear();
+                crewList = [];
+                shiftList = DEFAULT_SHIFTS;
+                attendanceLogs = [];
+                adminList = DEFAULT_ADMINS;
+                pengajuanList = [];
+                persistAllData();
+                refreshDashboard();
+                alert('Seluruh data berhasil dibersihkan.');
+            }
+        }
+    </script>
+</body>
+</html>
